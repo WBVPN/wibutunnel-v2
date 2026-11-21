@@ -30,6 +30,31 @@ menu
 
 - `install.sh` — installer satu file (21 MB), payload sudah tertanam di dalamnya.
 - `SHA256SUMS` — checksum installer.
+- `ari-bundle/` — bundle tambahan ZiVPN UDP + UDP Custom + SOCKS5 (lihat di bawah).
+
+## Bundle tambahan — ZiVPN UDP + UDP Custom + SOCKS5
+
+Folder `ari-bundle/` berisi installer offline untuk tiga layanan tambahan:
+
+- ZiVPN UDP (amd64/arm64/arm)
+- UDP Custom (x86_64)
+- SOCKS5 Dante + manager user
+
+Jalankan dari dalam folder bundle, bukan lewat `curl` satu file, karena payload-nya ada di `ari-bundle/payload/`:
+
+```bash
+git clone https://github.com/WBVPN/wibutunnel-v2.git
+cd wibutunnel-v2/ari-bundle
+sudo bash install.sh
+```
+
+Atau langsung pasang ketiganya:
+
+```bash
+sudo bash install.sh --install-all
+```
+
+Dokumentasi lengkap ada di `ari-bundle/README.md`.
 
 ## Perubahan dari ARI V7
 
