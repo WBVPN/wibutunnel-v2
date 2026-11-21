@@ -143,7 +143,7 @@ EOF
   while iptables -t nat -C PREROUTING -i "$iface" -p udp --dport 6000:19999 -j DNAT --to-destination :5667 2>/dev/null; do
     iptables -t nat -D PREROUTING -i "$iface" -p udp --dport 6000:19999 -j DNAT --to-destination :5667
   done
-  iptables -t nat -A PREROUTING -i "$iface" -p udp --dport 6000:19999 -j DNAT --to-destination :553
+  iptables -t nat -I PREROUTING 1 -i "$iface" -p udp --dport 6000:19999 -j DNAT --to-destination :553
 
   open_port 553 udp
   open_port 6000:19999 udp
@@ -179,6 +179,13 @@ install_udp_custom() {
   install -d -m 755 /etc/udp
   install -m 755 "$PAYLOAD/udp/udp-custom" /etc/udp/udp-custom
   install -m 644 "$PAYLOAD/udp/config.json" /etc/udp/config.json
+
+  # remove broad legacy DNAT from older installs; --exclude keeps ZiVPN's 553 free
+  local iface
+  iface="$(default_iface)"
+  while iptables -t nat -C PREROUTING -i "$iface" -p udp --dport 1:65535 -j DNAT --to-destination :36712 2>/dev/null; do
+    iptables -t nat -D PREROUTING -i "$iface" -p udp --dport 1:65535 -j DNAT --to-destination :36712
+  done
 
   [[ -n "$exclude" ]] && exec_args=" --exclude $exclude"
 
@@ -216,7 +223,8 @@ EOF
 install_socks5() {
   need_root
   local s5_user s5_pass
-  [[ -x "$PAYLOAD/socks5/socks5.sh" ]] || die "Script SOCKS5 tidak ditemukan."
+  [[ -f "$PAYLOAD/socks5/socks5.sh" ]] || die "Script SOCKS5 tidak ditemukan."
+  chmod +x "$PAYLOAD/socks5/socks5.sh" 2>/dev/null || true
   bash "$PAYLOAD/socks5/socks5.sh" --install
 
   s5_user="socks5$(gen_hex 3)"
@@ -239,7 +247,7 @@ install_socks5() {
 
 install_all() {
   install_zivpn
-  install_udp_custom "" || warn "UDP Custom dilewati (arsitektur tidak didukung atau instalasi gagal)."
+  install_udp_custom 553 || warn "UDP Custom dilewati (arsitektur tidak didukung atau instalasi gagal)."
   install_socks5
 }
 

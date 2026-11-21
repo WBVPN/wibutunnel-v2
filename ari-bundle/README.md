@@ -89,6 +89,8 @@ sudo systemctl restart zivpn
 
 Range `6000-19999/udp` diarahkan ke port `553` lewat iptables NAT. Kalau VPS punya firewall eksternal, buka juga range tersebut di panel provider.
 
+`--install-all` otomatis memakai `--exclude 553` untuk UDP Custom supaya port ZiVPN tidak direbut aturan DNAT UDP Custom.
+
 ## UDP Custom
 
 Config ada di `/etc/udp/config.json`, listen `:36712`. Service:
@@ -123,6 +125,38 @@ sudo bash payload/socks5/socks5.sh --add-user namauser passwordkuat 30
 ```
 
 Angka terakhir adalah masa aktif dalam hari (`0` = lifetime).
+
+## Jika Port Diblokir Provider
+
+Sebagian VPS hanya membuka `443/tcp` dan `80/tcp`. Kalau `ss -ltnp` menunjukkan `1080` listen tetapi koneksi dari luar timeout, firewall provider kemungkinan memblokir port itu. Solusi: mux SOCKS5 di port 443 memakai `nginx stream` + `ssl_preread`.
+
+```nginx
+# /etc/nginx/stream.d/socks-mux.conf
+stream {
+    map $ssl_preread_protocol $socks_mux_backend {
+        default 127.0.0.1:8443;   # TLS/HTTPS
+        ""      127.0.0.1:1080;   # SOCKS5 polos
+    }
+
+    server {
+        listen 443;
+        listen [::]:443;
+        proxy_pass $socks_mux_backend;
+        ssl_preread on;
+        proxy_connect_timeout 5s;
+        proxy_timeout 1h;
+    }
+}
+```
+
+Pindahkan blok HTTPS yang sudah ada dari `listen 443 ssl` ke `listen 127.0.0.1:8443 ssl`, lalu:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+curl --socks5-hostname USER:PASS@IP_VPS:443 https://api.ipify.org
+```
+
+Port `1080` tetap bisa dipakai dari dalam VPS. Untuk UDP, buka `553/udp`, `6000:19999/udp`, dan `36712/udp` di panel provider — bukan cuma di `ufw`.
 
 ## Verifikasi
 

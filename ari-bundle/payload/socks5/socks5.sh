@@ -195,15 +195,12 @@ install_socks5() {
 
   apt-get install -y dante-server curl iproute2
 
-  # log file
-  touch /var/log/danted.log
-  chown nobody:nogroup /var/log/danted.log 2>/dev/null || true
-
+  # log to journald: /var/log can be read-only or restricted on some VPS
   local iface
   iface="$(get_iface)"
 
   cat > "$DANTED_CONF" <<EOF
-logoutput: /var/log/danted.log
+logoutput: stderr
 internal: 0.0.0.0 port = ${PORT}
 external: ${iface}
 
@@ -234,7 +231,7 @@ EOF
   else
     echo -e "${YELLOW}Installed, but service not running. Check:${NC}"
     echo "  - systemctl status danted"
-    echo "  - tail -n 50 /var/log/danted.log"
+    echo "  - journalctl -u danted -n 50 --no-pager"
   fi
 }
 
